@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CloudTV"
+description = "CloudTV is a personal IPTV client for authorized M3U and Xtream Codes providers, with live playback, favorites, search, and EPG."
+version = "1.0.0"
+id = "artifacts/cloudtv"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22787
+
+[services.development]
+run = "pnpm --filter @workspace/cloudtv run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cloudtv", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cloudtv/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22787"
+BASE_PATH = "/"
