@@ -31,7 +31,13 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-          - name: Verify Android SDK
+               - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Verify Android SDK
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
