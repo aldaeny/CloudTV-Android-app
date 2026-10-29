@@ -44,9 +44,9 @@ jobs:
         working-directory: artifacts/cloudtv
         run: |
           if [ ! -d "android" ]; then
-            pnpm exec cap add android
+            npx cap add android
           fi
-          pnpm cap:sync
+          npx cap sync android
 
       - name: Configure Android 1.5 & Cleartext HTTP IPTV
         working-directory: artifacts/cloudtv/android
