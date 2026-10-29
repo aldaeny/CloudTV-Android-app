@@ -31,11 +31,14 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: "12266719"
-          packages: ""
+          - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_HOME"
+          ls -la "$ANDROID_HOME/cmdline-tools"
+          ls -la "$ANDROID_HOME/platforms"
+          ls -la "$ANDROID_HOME/build-tools"
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
