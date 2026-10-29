@@ -34,17 +34,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build CloudTV web app
+            - name: Create and sync Android project
         working-directory: artifacts/cloudtv
-        env:
-          PORT: "5173"
-          BASE_PATH: "/"
         run: |
-          pnpm build
-          echo "Checking web build output..."
-          find . -maxdepth 4 -name index.html -print
-          test -f dist/index.html
-
+          if [ ! -d android ]; then
+            pnpm exec cap add android
+          fi
+          pnpm exec cap sync android
       - name: Create and sync Android project
         working-directory: artifacts/cloudtv
         run: |
