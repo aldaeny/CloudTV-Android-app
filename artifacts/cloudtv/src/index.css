@@ -12,3 +12,9 @@ html, body, #root {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* TV remote focus ring */
+button:focus-visible, [role="button"]:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #35D6F2;
+  outline-offset: 2px;
+}

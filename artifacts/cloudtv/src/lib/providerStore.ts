@@ -100,7 +100,7 @@ export async function loadProviderState(): Promise<ProviderState> {
   const legacy = readLegacyProviderState();
   if (!legacy) return { servers: [], activeServerId: null };
 
-  await SecureStorage.set(STORAGE_KEY, legacy);
+  await SecureStorage.set(STORAGE_KEY, legacy as unknown as Record<string, unknown>);
   clearLegacyProviderState();
   return legacy;
 }
