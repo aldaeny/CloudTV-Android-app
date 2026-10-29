@@ -1,10 +1,27 @@
+تمام، هاي الصورة تثبت أن **نفس الخطأ القديم بعده يشتغل**:
+
+```text
+The web assets directory (./dist) must contain an index.html file.
+```
+
+وهذا يعني واحد من اثنين:
+
+1. **ملف workflow ما اتحدّث فعلياً**
+2. أو **تحديثه ما كان كافي**
+
+حتى ما نظل نعدّل سطر سطر، الأفضل هسه:
+
+## امسح ملف `build-apk.yml` كله
+واستبدله **بالكامل** بهذا الملف الجاهز:
+
+```yaml
 name: Build CloudTV 1.5 APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build-android:
@@ -22,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
           cache: "pnpm"
 
       - name: Setup Java 21
@@ -35,36 +52,101 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build CloudTV Web App
+        working-directory: artifacts/cloudtv
         env:
           PORT: "5173"
           BASE_PATH: "/"
-        run: pnpm --filter @workspace/cloudtv build
+        run: |
+          pnpm build
+          echo "PWD:"
+          pwd
+          echo "Files in app folder:"
+          ls -la
+          echo "Searching for index.html..."
+          find . -maxdepth 3 -name index.html
+          echo "Listing dist folder..."
+          ls -la dist || true
+          test -f dist/index.html
 
       - name: Add & Sync Capacitor Android
         working-directory: artifacts/cloudtv
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
+          if [ ! -f dist/index.html ]; then
+            echo "dist/index.html not found before Capacitor sync"
+            find . -maxdepth 3 -name index.html
+            exit 1
           fi
-          npx cap sync android
+
+          if [ ! -d android ]; then
+            pnpm exec cap add android
+          fi
+
+          pnpm exec cap sync android
 
       - name: Configure Android 1.5 & Cleartext HTTP IPTV
         working-directory: artifacts/cloudtv/android
         run: |
-          sed -i 's/versionCode 1/versionCode 15/g' app/build.gradle
-          sed -i 's/versionName "1.0"/versionName "1.5"/g' app/build.gradle
-          if ! grep -q "usesCleartextTraffic" app/src/main/AndroidManifest.xml; then
-            sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' app/src/main/AndroidManifest.xml
+          sed -i 's/versionCode 1/versionCode 15/g' app/build.gradle || true
+          sed -i 's/versionName "1.0"/versionName "1.5"/g' app/build.gradle || true
+          if ! grep -q 'usesCleartextTraffic' app/src/main/AndroidManifest.xml; then
+            sed -i 's/<application/<application android:usesCleartextTraffic="true"/' app/src/main/AndroidManifest.xml
           fi
+
+      - name: Write Android local.properties
+        working-directory: artifacts/cloudtv/android
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
       - name: Build Debug APK
         working-directory: artifacts/cloudtv/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload CloudTV 1.5 APK
         uses: actions/upload-artifact@v4
         with:
           name: CloudTV-1.5-APK
           path: artifacts/cloudtv/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+## شلون تسويه؟
+1. افتح:
+   `/.github/workflows/build-apk.yml`
+2. **حدد كل النص**
+3. **احذفه**
+4. **الصق الملف الكامل أعلاه**
+5. اضغط **Commit changes**
+6. روح إلى **Actions**
+7. شغّل build جديد أو انتظر يشتغل تلقائياً
+
+---
+
+## ليش هذا أحسن؟
+لأنه:
+- ثبتنا **Node 22** المطلوب لـ Capacitor
+- خلينا build الويب يشتغل داخل `artifacts/cloudtv`
+- أضفنا فحص صريح لـ `dist/index.html`
+- أوقفنا التخمين، وصار الخطأ القادم أوضح إذا موجود
+
+---
+
+## مهم
+الصورة اللي أرسلتها تبين أن اللوق بعده يبدأ بـ:
+
+```text
+Run if [ ! -d "android" ]; then
+```
+
+يعني على الأغلب **الملف الحالي بعده النسخة القديمة** أو مو كامل متبدل.
+
+---
+
+## بعد ما تسويها
+إذا فشل مرة ثانية، دزلي **صورة خطوة Build CloudTV Web App** مو Add & Sync، لأن هالمرة نريد نشوف:
+- هل `dist/index.html` انبنى فعلاً
+- لو لا
+
+إذا تريد، أگدر أبقى وياك هسه خطوة بخطوة، وأراجع وياك **شكل الملف بعد اللصق** قبل ما تضغط Commit.
