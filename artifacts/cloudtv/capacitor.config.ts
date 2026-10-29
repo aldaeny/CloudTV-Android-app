@@ -1,22 +1,19 @@
-import type { CapacitorConfig } from "@capacitor/cli";
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: "com.cloudtv.client",
-  appName: "CloudTV",
-  webDir: "dist/public",
-  backgroundColor: "#0A1128",
+  appId: 'com.cloudtv.client',
+  appName: 'CloudTV',
+  webDir: 'dist',
   server: {
-    androidScheme: "https",
+    androidScheme: 'https',
     cleartext: true,
-  },
-  android: {
-    allowMixedContent: true,
+    allowNavigation: ['*']
   },
   plugins: {
     CapacitorHttp: {
-      enabled: true,
-    },
-  },
+      enabled: true
+    }
+  }
 };
 
 export default config;
