@@ -10,6 +10,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,19 +37,45 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-            - name: Create and sync Android project
+      - name: Build CloudTV web app
+        working-directory: artifacts/cloudtv
+        env:
+          PORT: "5173"
+          BASE_PATH: "/"
+        run: |
+          pnpm build
+
+          echo "Checking build files..."
+
+          if [ ! -f dist/public/index.html ]; then
+            echo "ERROR: dist/public/index.html not found"
+            find . -maxdepth 4 -name index.html
+            exit 1
+          fi
+
+          echo "Web build successful"
+
+      - name: Prepare Capacitor web assets
+        working-directory: artifacts/cloudtv
+        run: |
+          mkdir -p dist
+
+          cp -a dist/public/. dist/
+
+          test -f dist/index.html
+
+          echo "Capacitor web assets ready"
+
+      - name: Create Android project
         working-directory: artifacts/cloudtv
         run: |
           if [ ! -d android ]; then
             pnpm exec cap add android
           fi
-          pnpm exec cap sync android
-      - name: Create and sync Android project
+
+      - name: Sync Capacitor Android
         working-directory: artifacts/cloudtv
         run: |
-          if [ ! -d android ]; then
-            pnpm exec cap add android
-          fi
           pnpm exec cap sync android
 
       - name: Configure Android version and permissions
@@ -57,6 +86,10 @@ jobs:
           import re
 
           gradle = Path("app/build.gradle")
+
+          if not gradle.exists():
+              raise SystemExit("Android build.gradle not found")
+
           text = gradle.read_text()
 
           text = re.sub(
@@ -77,6 +110,9 @@ jobs:
               "app/src/main/AndroidManifest.xml"
           )
 
+          if not manifest.exists():
+              raise SystemExit("AndroidManifest.xml not found")
+
           text = manifest.read_text()
 
           if "android.permission.INTERNET" not in text:
@@ -94,7 +130,16 @@ jobs:
               )
 
           manifest.write_text(text)
+
+          print("Android configuration updated")
           PY
+
+      - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+
+          test -d "$ANDROID_SDK_ROOT"
 
       - name: Build Android Debug APK
         working-directory: artifacts/cloudtv/android
@@ -102,10 +147,14 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
+      - name: Verify APK exists
+        run: |
+          test -f artifacts/cloudtv/android/app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload CloudTV APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: CloudTV-1.5-Beta-APK
           path: artifacts/cloudtv/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 14
