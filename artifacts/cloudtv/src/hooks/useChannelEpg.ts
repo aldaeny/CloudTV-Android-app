@@ -7,6 +7,7 @@ export interface ChannelEpgResult {
   programs: EPGProgram[];
   current?: EPGProgram;
   next?: EPGProgram;
+  isSimulated?: boolean;
 }
 
 export function useChannelEpg(channel: Channel | null | undefined): ChannelEpgResult {

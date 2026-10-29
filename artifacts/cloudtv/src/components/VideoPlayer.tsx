@@ -37,12 +37,18 @@ export default function VideoPlayer({
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   useEffect(() => {
+    retriesRef.current = 0;
+    setAttempt(0);
+  }, [src]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
 
     setStatus("loading");
     setErrorMsg("");
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let mediaRecoveries = 0;
     const failWithRetry = (msg: string) => {
       if (retriesRef.current < MAX_RETRIES) {
         retriesRef.current += 1;
@@ -98,9 +104,12 @@ export default function VideoPlayer({
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             msg = "Network error while loading the stream. Check your connection or try another channel.";
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            msg = "Media error - attempting to recover.";
-            hls.recoverMediaError();
-            return;
+            msg = "Media error while decoding the stream.";
+            if (mediaRecoveries < 2) {
+              mediaRecoveries += 1;
+              hls.recoverMediaError();
+              return;
+            }
           }
           hls.destroy();
           failWithRetry(msg);

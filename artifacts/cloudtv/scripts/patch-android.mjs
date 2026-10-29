@@ -24,5 +24,16 @@ if (!xml.includes("LEANBACK_LAUNCHER")) {
     '$1\n                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />',
   );
 }
+if (!xml.includes("android.permission.INTERNET")) {
+  xml = xml.replace("<application", '<uses-permission android:name="android.permission.INTERNET" />\n    <application');
+}
 fs.writeFileSync(manifest, xml);
+
+// Version 1.5 (package ID and signing config are left untouched).
+const gradle = path.resolve("android/app/build.gradle");
+if (fs.existsSync(gradle)) {
+  let g = fs.readFileSync(gradle, "utf8");
+  g = g.replace(/versionName\s+"[^"]*"/, 'versionName "1.5"').replace(/versionCode\s+\d+/, "versionCode 15");
+  fs.writeFileSync(gradle, g);
+}
 console.log("patched", manifest);
