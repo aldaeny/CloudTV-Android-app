@@ -31,9 +31,11 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Setup Android SDK
+       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
+        with:
+          cmdline-tools-version: "12266719"
+          packages: ""
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
