@@ -15,7 +15,7 @@ export default function TopBar({
   onServerSwitch?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
+    <div className="flex items-center justify-between gap-3 border-b border-[#1769FF]/30 bg-[#0A1128] px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
       <div className="min-w-0">
         <h1 className="truncate text-lg font-bold tracking-tight text-white">{title}</h1>
         <button onClick={onServerSwitch} className="mt-0.5 flex items-center gap-1 text-[11px] text-neutral-400">

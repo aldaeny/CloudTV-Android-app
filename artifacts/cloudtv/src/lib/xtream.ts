@@ -10,6 +10,11 @@ function normalizeHost(host: string): string {
   return parsed.toString().replace(/\/+$/, "");
 }
 
+/** Convert Xtream live URLs (.ts / .mp4 / extensionless) to HLS .m3u8. */
+export function toXtreamHlsUrl(url: string): string {
+  return url.replace(/(\/live\/[^/?#]+\/[^/?#]+\/[^/?#.]+)(?:\.(?:ts|mp4|mkv|flv|avi))?(?=$|[?#])/i, "$1.m3u8");
+}
+
 export interface XtreamAccountInfo {
   authenticated: boolean;
   status?: string;
@@ -71,7 +76,7 @@ export async function fetchXtreamChannels(server: ServerConfig): Promise<Channel
   if (!Array.isArray(data)) return [];
   const host = normalizeHost(server.host || "");
   return data.map((s: any) => {
-    const ext = s.container_extension || "m3u8";
+    const ext = "m3u8";
     const username = encodeURIComponent(server.username || "");
     const password = encodeURIComponent(server.password || "");
     const streamId = encodeURIComponent(String(s.stream_id));

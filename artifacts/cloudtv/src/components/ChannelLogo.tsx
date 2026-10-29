@@ -6,7 +6,7 @@ export default function ChannelLogo({ src, alt, className }: { src?: string; alt
 
   if (!src || failed) {
     return (
-      <div className={`flex items-center justify-center bg-neutral-800 text-neutral-500 ${className || ""}`}>
+      <div className={`flex aspect-square items-center justify-center bg-neutral-800 text-neutral-500 ${className || ""}`}>
         <Tv className="h-1/2 w-1/2" strokeWidth={1.5} />
       </div>
     );
@@ -18,7 +18,7 @@ export default function ChannelLogo({ src, alt, className }: { src?: string; alt
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}
-      className={`object-contain ${className || ""}`}
+      className={`aspect-square object-contain ${className || ""}`}
     />
   );
 }
