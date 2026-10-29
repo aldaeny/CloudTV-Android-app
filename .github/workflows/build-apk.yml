@@ -1,34 +1,17 @@
-تمام، هاي الصورة تثبت أن **نفس الخطأ القديم بعده يشتغل**:
-
-```text
-The web assets directory (./dist) must contain an index.html file.
-```
-
-وهذا يعني واحد من اثنين:
-
-1. **ملف workflow ما اتحدّث فعلياً**
-2. أو **تحديثه ما كان كافي**
-
-حتى ما نظل نعدّل سطر سطر، الأفضل هسه:
-
-## امسح ملف `build-apk.yml` كله
-واستبدله **بالكامل** بهذا الملف الجاهز:
-
-```yaml
 name: Build CloudTV 1.5 APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -36,117 +19,97 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "pnpm"
+          cache: pnpm
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
+          distribution: temurin
           java-version: "21"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build CloudTV Web App
+      - name: Build CloudTV web app
         working-directory: artifacts/cloudtv
         env:
           PORT: "5173"
           BASE_PATH: "/"
         run: |
           pnpm build
-          echo "PWD:"
-          pwd
-          echo "Files in app folder:"
-          ls -la
-          echo "Searching for index.html..."
-          find . -maxdepth 3 -name index.html
-          echo "Listing dist folder..."
-          ls -la dist || true
+          echo "Checking web build output..."
+          find . -maxdepth 4 -name index.html -print
           test -f dist/index.html
 
-      - name: Add & Sync Capacitor Android
+      - name: Create and sync Android project
         working-directory: artifacts/cloudtv
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "dist/index.html not found before Capacitor sync"
-            find . -maxdepth 3 -name index.html
-            exit 1
-          fi
-
           if [ ! -d android ]; then
             pnpm exec cap add android
           fi
-
           pnpm exec cap sync android
 
-      - name: Configure Android 1.5 & Cleartext HTTP IPTV
+      - name: Configure Android version and permissions
         working-directory: artifacts/cloudtv/android
         run: |
-          sed -i 's/versionCode 1/versionCode 15/g' app/build.gradle || true
-          sed -i 's/versionName "1.0"/versionName "1.5"/g' app/build.gradle || true
-          if ! grep -q 'usesCleartextTraffic' app/src/main/AndroidManifest.xml; then
-            sed -i 's/<application/<application android:usesCleartextTraffic="true"/' app/src/main/AndroidManifest.xml
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-      - name: Write Android local.properties
-        working-directory: artifacts/cloudtv/android
-        run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          gradle = Path("app/build.gradle")
+          text = gradle.read_text()
 
-      - name: Build Debug APK
+          text = re.sub(
+              r'versionCode\s+\d+',
+              'versionCode 15',
+              text
+          )
+
+          text = re.sub(
+              r'versionName\s+["\'][^"\']+["\']',
+              'versionName "1.5"',
+              text
+          )
+
+          gradle.write_text(text)
+
+          manifest = Path(
+              "app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text()
+
+          if "android.permission.INTERNET" not in text:
+              text = text.replace(
+                  "<application",
+                  '<uses-permission android:name="android.permission.INTERNET" />\n    <application',
+                  1
+              )
+
+          if "usesCleartextTraffic" not in text:
+              text = text.replace(
+                  "<application",
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+
+          manifest.write_text(text)
+          PY
+
+      - name: Build Android Debug APK
         working-directory: artifacts/cloudtv/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
-      - name: Upload CloudTV 1.5 APK
+      - name: Upload CloudTV APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: CloudTV-1.5-APK
+          name: CloudTV-1.5-Beta-APK
           path: artifacts/cloudtv/android/app/build/outputs/apk/debug/app-debug.apk
-```
-
----
-
-## شلون تسويه؟
-1. افتح:
-   `/.github/workflows/build-apk.yml`
-2. **حدد كل النص**
-3. **احذفه**
-4. **الصق الملف الكامل أعلاه**
-5. اضغط **Commit changes**
-6. روح إلى **Actions**
-7. شغّل build جديد أو انتظر يشتغل تلقائياً
-
----
-
-## ليش هذا أحسن؟
-لأنه:
-- ثبتنا **Node 22** المطلوب لـ Capacitor
-- خلينا build الويب يشتغل داخل `artifacts/cloudtv`
-- أضفنا فحص صريح لـ `dist/index.html`
-- أوقفنا التخمين، وصار الخطأ القادم أوضح إذا موجود
-
----
-
-## مهم
-الصورة اللي أرسلتها تبين أن اللوق بعده يبدأ بـ:
-
-```text
-Run if [ ! -d "android" ]; then
-```
-
-يعني على الأغلب **الملف الحالي بعده النسخة القديمة** أو مو كامل متبدل.
-
----
-
-## بعد ما تسويها
-إذا فشل مرة ثانية، دزلي **صورة خطوة Build CloudTV Web App** مو Add & Sync، لأن هالمرة نريد نشوف:
-- هل `dist/index.html` انبنى فعلاً
-- لو لا
-
-إذا تريد، أگدر أبقى وياك هسه خطوة بخطوة، وأراجع وياك **شكل الملف بعد اللصق** قبل ما تضغط Commit.
+          if-no-files-found: error
