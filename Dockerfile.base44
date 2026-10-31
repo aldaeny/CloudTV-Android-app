@@ -1,0 +1,7 @@
+# Base44 dev runtime image: Node + pnpm only.
+# Application source is NOT baked in — it is bind-mounted from the checkout.
+FROM node:24-bookworm-slim
+
+RUN npm install -g pnpm@10.24.0
+
+WORKDIR /workspace
